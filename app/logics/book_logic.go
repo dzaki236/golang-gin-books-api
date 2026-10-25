@@ -12,7 +12,7 @@ import (
 )
 
 func ListBooks(ctx *gin.Context) ([]structs.Book, error) {
-	rows, err := configs.DB.QueryContext(ctx.Request.Context(), `SELECT book.id, book.title, book.description, book.image_url, book.release_year, book.price, book.total_page, book.thickness, book.category_id, book.created_at, book.id, book.name, book.created_at FROM books book JOIN categories book ON book.id = book.category_id ORDER BY book.created_at DESC`)
+	rows, err := configs.DB.QueryContext(ctx.Request.Context(), `SELECT book.id, book.title, book.description, book.image_url, book.release_year, book.price, book.total_page, book.thickness, book.category_id, book.created_at, category.id, category.name, category.created_at FROM books book JOIN categories category ON category.id = book.category_id ORDER BY book.created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func ListBooks(ctx *gin.Context) ([]structs.Book, error) {
 }
 
 func ListBooksByCategory(ctx *gin.Context, categoryID int) ([]structs.Book, error) {
-	rows, err := configs.DB.QueryContext(ctx.Request.Context(), `SELECT book.id, book.title, book.description, book.image_url, book.release_year, book.price, book.total_page, book.thickness, book.category_id, book.created_at, book.id, book.name, book.created_at FROM books book JOIN categories book ON book.id = book.category_id WHERE book.category_id = $1 ORDER BY book.created_at DESC`, categoryID)
+	rows, err := configs.DB.QueryContext(ctx.Request.Context(), `SELECT book.id, book.title, book.description, book.image_url, book.release_year, book.price, book.total_page, book.thickness, book.category_id, book.created_at, category.id, category.name, category.created_at FROM books book JOIN categories category ON category.id = book.category_id WHERE category.id = $1 ORDER BY book.created_at DESC`, categoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func ListBooksByCategory(ctx *gin.Context, categoryID int) ([]structs.Book, erro
 func FindBook(ctx *gin.Context, id int) (structs.Book, error) {
 	var book structs.Book
 	err := configs.DB.QueryRowContext(ctx.Request.Context(),
-		`SELECT book.id, book.title, book.description, book.image_url, book.release_year, book.price, book.total_page, book.thickness, book.category_id, book.created_at, book.id, book.name, book.created_at FROM books book JOIN categories book ON book.id = book.category_id WHERE book.id = $1`, id,
+		`SELECT book.id, book.title, book.description, book.image_url, book.release_year, book.price, book.total_page, book.thickness, book.category_id, book.created_at, category.id, category.name, category.created_at FROM books book JOIN categories category ON category.id = book.category_id WHERE book.id = $1`, id,
 	).Scan(&book.ID, &book.Title, &book.Description, &book.ImageURL, &book.ReleaseYear, &book.Price, &book.TotalPage, &book.Thickness, &book.CategoryID, &book.CreatedAt, &book.Category.ID, &book.Category.Name, &book.Category.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return structs.Book{}, helpers.ErrBookNotFound

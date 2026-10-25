@@ -16,7 +16,7 @@ import (
 func ListBooks(context *gin.Context) {
 	books, err := logics.ListBooks(context)
 	if err != nil {
-		helpers.Respond(context, http.StatusInternalServerError, "daftar buku tidak dapat diambil", nil)
+		helpers.Respond(context, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	helpers.Respond(context, http.StatusOK, "daftar buku berhasil diambil", books)
