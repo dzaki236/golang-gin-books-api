@@ -12,7 +12,7 @@ import (
 
 func main() {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
-		log.Fatal("load .env: ", err)
+		log.Fatal("gagal memuat berkas .env: ", err)
 	}
 	if err := configs.OpenDatabase(); err != nil {
 		log.Fatal(err)
@@ -21,7 +21,7 @@ func main() {
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if len(jwtSecret) < 32 {
-		log.Fatal("JWT_SECRET must be set and contain at least 32 characters")
+		log.Fatal("JWT_SECRET wajib diatur dan berisi setidaknya 32 karakter")
 	}
 
 	port := os.Getenv("PORT")
@@ -34,6 +34,6 @@ func main() {
 	routes.RegisterAuthRoutes(api)
 	routes.RegisterCategoryRoutes(api)
 	if err := router.Run(":" + port); err != nil {
-		log.Fatal("start API server: ", err)
+		log.Fatal("gagal menjalankan server API: ", err)
 	}
 }

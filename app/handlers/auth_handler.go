@@ -23,36 +23,36 @@ const accessTokenLifetime = 24 * time.Hour
 func Register(context *gin.Context) {
 	var request structs.AuthRequest
 	if err := context.ShouldBindJSON(&request); err != nil || !validCredentials(request) {
-		helpers.Respond(context, http.StatusBadRequest, "username must be 3-100 characters and password 8-72 characters", nil)
+		helpers.Respond(context, http.StatusBadRequest, "nama pengguna harus terdiri dari 3-100 karakter dan kata sandi 8-72 karakter", nil)
 		return
 	}
 	request.Username = strings.TrimSpace(request.Username)
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
-		helpers.Respond(context, http.StatusInternalServerError, "could not create account", nil)
+		helpers.Respond(context, http.StatusInternalServerError, "akun tidak dapat dibuat", nil)
 		return
 	}
 	user, err := logics.CreateUser(context.Request.Context(), request.Username, string(passwordHash))
 	if errors.Is(err, helpers.ErrUsernameTaken) {
-		helpers.Respond(context, http.StatusConflict, "username is already registered", nil)
+		helpers.Respond(context, http.StatusConflict, "nama pengguna sudah terdaftar", nil)
 		return
 	}
 	if err != nil {
-		helpers.Respond(context, http.StatusInternalServerError, "could not create account", nil)
+		helpers.Respond(context, http.StatusInternalServerError, "akun tidak dapat dibuat", nil)
 		return
 	}
-	helpers.Respond(context, http.StatusCreated, "registration successful", user)
+	helpers.Respond(context, http.StatusCreated, "pendaftaran berhasil", user)
 }
 
 func Login(context *gin.Context) {
 	var request structs.AuthRequest
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if len(jwtSecret) < 32 {
-		log.Fatal("JWT_SECRET must be set and contain at least 32 characters")
+		log.Fatal("JWT_SECRET wajib diatur dan berisi setidaknya 32 karakter")
 	}
 	if err := context.ShouldBindJSON(&request); err != nil || !validCredentials(request) {
-		helpers.Respond(context, http.StatusBadRequest, "username and password are required", nil)
+		helpers.Respond(context, http.StatusBadRequest, "nama pengguna dan kata sandi wajib diisi", nil)
 		return
 	}
 
@@ -60,14 +60,14 @@ func Login(context *gin.Context) {
 	user, err := logics.FindUserByUsername(context.Request.Context(), request.Username)
 	if err != nil {
 		if errors.Is(err, helpers.ErrUserNotFound) {
-			helpers.Respond(context, http.StatusUnauthorized, "invalid username or password", nil)
+			helpers.Respond(context, http.StatusUnauthorized, "nama pengguna atau kata sandi salah", nil)
 			return
 		}
-		helpers.Respond(context, http.StatusInternalServerError, "could not authenticate", nil)
+		helpers.Respond(context, http.StatusInternalServerError, "autentikasi gagal", nil)
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
-		helpers.Respond(context, http.StatusUnauthorized, "invalid username or password", nil)
+		helpers.Respond(context, http.StatusUnauthorized, "nama pengguna atau kata sandi salah", nil)
 		return
 	}
 
@@ -81,12 +81,12 @@ func Login(context *gin.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
-		helpers.Respond(context, http.StatusInternalServerError, "could not create access token", nil)
+		helpers.Respond(context, http.StatusInternalServerError, "token akses tidak dapat dibuat", nil)
 		return
 	}
 
 	user.Password = ""
-	helpers.Respond(context, http.StatusOK, "login successful", structs.AuthResponse{
+	helpers.Respond(context, http.StatusOK, "berhasil masuk", structs.AuthResponse{
 		User:        user,
 		AccessToken: signedToken,
 		TokenType:   "Bearer",
