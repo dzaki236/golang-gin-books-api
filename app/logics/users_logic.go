@@ -26,7 +26,7 @@ func CreateUser(ctx *gin.Context, username, passwordHash string) (structs.User, 
 func FindUserByUsername(ctx *gin.Context, username string) (structs.User, error) {
 	var user structs.User
 	err := configs.DB.QueryRowContext(ctx.Request.Context(),
-		`SELECT id, username, password, created_at FROM users WHERE username = $1`,
+		`SELECT id, username, password, created_at FROM users WHERE username = $1 LIMIT 1`,
 		username,
 	).Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {

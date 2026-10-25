@@ -33,7 +33,7 @@ func ListCategories(ctx *gin.Context) ([]structs.Category, error) {
 func FindCategory(ctx *gin.Context, id int) (structs.Category, error) {
 	var category structs.Category
 	err := configs.DB.QueryRowContext(ctx.Request.Context(),
-		`SELECT id, name, created_at FROM categories WHERE id = $1`, id,
+		`SELECT id, name, created_at FROM categories WHERE id = $1 LIMIT 1`, id,
 	).Scan(&category.ID, &category.Name, &category.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return structs.Category{}, helpers.ErrCategoryNotFound
