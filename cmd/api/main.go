@@ -4,6 +4,7 @@ import (
 	"books-api/app/configs"
 	"books-api/app/routes"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,11 @@ func main() {
 	}
 	router := gin.Default()
 	api := router.Group("/api")
-
+	api.GET("/", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusCreated, gin.H{
+			"message": "api siap digunakan",
+		})
+	})
 	routes.RegisterAuthRoutes(api)
 	routes.RegisterCategoryRoutes(api)
 	routes.RegisterBookRoutes(api)
