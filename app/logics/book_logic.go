@@ -28,6 +28,24 @@ func ListBooks(ctx context.Context) ([]structs.Book, error) {
 	return books, rows.Err()
 }
 
+func ListBooksByCategory(ctx context.Context, categoryID int) ([]structs.Book, error) {
+	rows, err := configs.DB.QueryContext(ctx, `SELECT id, title, description, image_url, release_year, price, total_page, thickness, category_id, created_at FROM books WHERE category_id = $1 ORDER BY id`, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	books := make([]structs.Book, 0)
+	for rows.Next() {
+		var book structs.Book
+		if err := rows.Scan(&book.ID, &book.Title, &book.Description, &book.ImageURL, &book.ReleaseYear, &book.Price, &book.TotalPage, &book.Thickness, &book.CategoryID, &book.CreatedAt); err != nil {
+			return nil, err
+		}
+		books = append(books, book)
+	}
+	return books, rows.Err()
+}
+
 func FindBook(ctx context.Context, id int) (structs.Book, error) {
 	var book structs.Book
 	err := configs.DB.QueryRowContext(ctx,

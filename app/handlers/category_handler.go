@@ -36,6 +36,37 @@ func GetCategory(context *gin.Context) {
 	helpers.Respond(context, http.StatusOK, "kategori berhasil diambil", category)
 }
 
+func ListCategoryBooks(context *gin.Context) {
+	id, err := strconv.Atoi(context.Param("id"))
+	if err != nil || id < 1 {
+		helpers.Respond(context, http.StatusBadRequest, "ID kategori tidak valid", nil)
+		return
+	}
+	category, err := logics.FindCategory(context.Request.Context(), id)
+	if errors.Is(err, helpers.ErrCategoryNotFound) {
+		helpers.Respond(context, http.StatusNotFound, "kategori tidak ditemukan", nil)
+		return
+	}
+	if err != nil {
+		helpers.Respond(context, http.StatusInternalServerError, "kategori tidak dapat diambil", nil)
+		return
+	}
+	books, err := logics.ListBooksByCategory(context.Request.Context(), id)
+	if err != nil {
+		helpers.Respond(context, http.StatusInternalServerError, "daftar buku kategori tidak dapat diambil", nil)
+		return
+	}
+	categoryBooks := gin.H{
+		"id": category.ID,
+		"category": gin.H{
+			"name":       category.Name,
+			"created_at": category.CreatedAt,
+		},
+		"books": books,
+	}
+	helpers.Respond(context, http.StatusOK, "daftar buku kategori berhasil diambil", categoryBooks)
+}
+
 func CreateCategory(context *gin.Context) {
 	var request structs.CategoryRequest
 	if err := context.ShouldBindJSON(&request); err != nil {
