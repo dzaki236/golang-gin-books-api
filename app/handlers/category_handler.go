@@ -14,7 +14,7 @@ import (
 )
 
 func ListCategories(context *gin.Context) {
-	categories, err := logics.ListCategories(context.Request.Context())
+	categories, err := logics.ListCategories(context)
 	if err != nil {
 		helpers.Respond(context, http.StatusInternalServerError, "daftar kategori tidak dapat diambil", nil)
 		return
@@ -24,7 +24,7 @@ func ListCategories(context *gin.Context) {
 
 func GetCategory(context *gin.Context) {
 	id, _ := strconv.Atoi(context.Param("id"))
-	category, err := logics.FindCategory(context.Request.Context(), id)
+	category, err := logics.FindCategory(context, id)
 	if errors.Is(err, helpers.ErrCategoryNotFound) {
 		helpers.Respond(context, http.StatusNotFound, "kategori tidak ditemukan", nil)
 		return
@@ -42,7 +42,7 @@ func ListCategoryBooks(context *gin.Context) {
 		helpers.Respond(context, http.StatusBadRequest, "ID kategori tidak valid", nil)
 		return
 	}
-	category, err := logics.FindCategory(context.Request.Context(), id)
+	category, err := logics.FindCategory(context, id)
 	if errors.Is(err, helpers.ErrCategoryNotFound) {
 		helpers.Respond(context, http.StatusNotFound, "kategori tidak ditemukan", nil)
 		return
@@ -51,7 +51,7 @@ func ListCategoryBooks(context *gin.Context) {
 		helpers.Respond(context, http.StatusInternalServerError, "kategori tidak dapat diambil", nil)
 		return
 	}
-	books, err := logics.ListBooksByCategory(context.Request.Context(), id)
+	books, err := logics.ListBooksByCategory(context, id)
 	if err != nil {
 		helpers.Respond(context, http.StatusInternalServerError, "daftar buku kategori tidak dapat diambil", nil)
 		return
@@ -78,7 +78,7 @@ func CreateCategory(context *gin.Context) {
 		helpers.Respond(context, http.StatusBadRequest, "nama kategori harus terdiri dari 1-150 karakter", nil)
 		return
 	}
-	category, err := logics.CreateCategory(context.Request.Context(), request.Name)
+	category, err := logics.CreateCategory(context, request.Name, context.GetString("username"))
 	if errors.Is(err, helpers.ErrCategoryExists) {
 		helpers.Respond(context, http.StatusConflict, "nama kategori sudah digunakan", nil)
 		return
@@ -102,7 +102,7 @@ func UpdateCategory(context *gin.Context) {
 		helpers.Respond(context, http.StatusBadRequest, "nama kategori harus terdiri dari 1-150 karakter", nil)
 		return
 	}
-	category, err := logics.UpdateCategory(context.Request.Context(), id, request.Name)
+	category, err := logics.UpdateCategory(context, id, request.Name, context.GetString("username"))
 	if errors.Is(err, helpers.ErrCategoryNotFound) {
 		helpers.Respond(context, http.StatusNotFound, "kategori tidak ditemukan", nil)
 		return
@@ -120,7 +120,7 @@ func UpdateCategory(context *gin.Context) {
 
 func DeleteCategory(context *gin.Context) {
 	id, _ := strconv.Atoi(context.Param("id"))
-	if err := logics.DeleteCategory(context.Request.Context(), id); errors.Is(err, helpers.ErrCategoryNotFound) {
+	if err := logics.DeleteCategory(context, id); errors.Is(err, helpers.ErrCategoryNotFound) {
 		helpers.Respond(context, http.StatusNotFound, "kategori tidak ditemukan", nil)
 		return
 	} else if err != nil {

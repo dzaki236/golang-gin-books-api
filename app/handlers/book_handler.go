@@ -14,7 +14,7 @@ import (
 )
 
 func ListBooks(context *gin.Context) {
-	books, err := logics.ListBooks(context.Request.Context())
+	books, err := logics.ListBooks(context)
 	if err != nil {
 		helpers.Respond(context, http.StatusInternalServerError, "daftar buku tidak dapat diambil", nil)
 		return
@@ -28,7 +28,7 @@ func GetBook(context *gin.Context) {
 		helpers.Respond(context, http.StatusBadRequest, "ID buku tidak valid", nil)
 		return
 	}
-	book, err := logics.FindBook(context.Request.Context(), id)
+	book, err := logics.FindBook(context, id)
 	if errors.Is(err, helpers.ErrBookNotFound) {
 		helpers.Respond(context, http.StatusNotFound, "buku tidak ditemukan", nil)
 		return
@@ -46,11 +46,11 @@ func CreateBook(context *gin.Context) {
 		helpers.Respond(context, http.StatusBadRequest, "data buku tidak valid", nil)
 		return
 	}
-	if message := validateBookRequest(&request); message != "" {
+	if message := _validateBookRequest(&request); message != "" {
 		helpers.Respond(context, http.StatusBadRequest, message, nil)
 		return
 	}
-	book, err := logics.CreateBook(context.Request.Context(), request)
+	book, err := logics.CreateBook(context, request, context.GetString("username"))
 	if err != nil {
 		helpers.Respond(context, http.StatusInternalServerError, "buku tidak dapat dibuat", nil)
 		return
@@ -69,11 +69,11 @@ func UpdateBook(context *gin.Context) {
 		helpers.Respond(context, http.StatusBadRequest, "data buku tidak valid", nil)
 		return
 	}
-	if message := validateBookRequest(&request); message != "" {
+	if message := _validateBookRequest(&request); message != "" {
 		helpers.Respond(context, http.StatusBadRequest, message, nil)
 		return
 	}
-	book, err := logics.UpdateBook(context.Request.Context(), id, request)
+	book, err := logics.UpdateBook(context, id, request, context.GetString("username"))
 	if errors.Is(err, helpers.ErrBookNotFound) {
 		helpers.Respond(context, http.StatusNotFound, "buku tidak ditemukan", nil)
 		return
@@ -91,7 +91,7 @@ func DeleteBook(context *gin.Context) {
 		helpers.Respond(context, http.StatusBadRequest, "ID buku tidak valid", nil)
 		return
 	}
-	if err := logics.DeleteBook(context.Request.Context(), id); errors.Is(err, helpers.ErrBookNotFound) {
+	if err := logics.DeleteBook(context, id); errors.Is(err, helpers.ErrBookNotFound) {
 		helpers.Respond(context, http.StatusNotFound, "buku tidak ditemukan", nil)
 		return
 	} else if err != nil {
@@ -101,10 +101,16 @@ func DeleteBook(context *gin.Context) {
 	helpers.Respond(context, http.StatusOK, "buku berhasil dihapus", nil)
 }
 
-func validateBookRequest(request *structs.BookRequest) string {
+func _validateBookRequest(request *structs.BookRequest) string {
 	request.Title = strings.TrimSpace(request.Title)
-	if request.Title == "" || len(request.Title) > 255 {
-		return "judul harus terdiri dari 1-255 karakter"
+	if request.Title == "" {
+		return "judul wajib diisi"
+	}
+	if request.Description == "" {
+		return "deskripsi wajib diisi"
+	}
+	if request.ImageURL == "" {
+		return "URL gambar wajib diisi"
 	}
 	if request.ReleaseYear < 1980 || request.ReleaseYear > 2024 {
 		return "tahun terbit (release_year) harus antara 1980 dan 2024"

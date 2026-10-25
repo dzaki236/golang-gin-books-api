@@ -33,6 +33,7 @@ func main() {
 
 	routes.RegisterAuthRoutes(api)
 	routes.RegisterCategoryRoutes(api)
+	routes.RegisterBookRoutes(api)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("gagal menjalankan server API: ", err)
 	}

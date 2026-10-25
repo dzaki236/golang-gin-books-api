@@ -1,18 +1,19 @@
 package logics
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 
 	"books-api/app/configs"
 	"books-api/app/helpers"
 	"books-api/app/structs"
+
+	"github.com/gin-gonic/gin"
 )
 
-func CreateUser(ctx context.Context, username, passwordHash string) (structs.User, error) {
+func CreateUser(ctx *gin.Context, username, passwordHash string) (structs.User, error) {
 	var user structs.User
-	err := configs.DB.QueryRowContext(ctx,
+	err := configs.DB.QueryRowContext(ctx.Request.Context(),
 		`INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, created_at`,
 		username, passwordHash,
 	).Scan(&user.ID, &user.Username, &user.CreatedAt)
@@ -22,9 +23,9 @@ func CreateUser(ctx context.Context, username, passwordHash string) (structs.Use
 	return user, nil
 }
 
-func FindUserByUsername(ctx context.Context, username string) (structs.User, error) {
+func FindUserByUsername(ctx *gin.Context, username string) (structs.User, error) {
 	var user structs.User
-	err := configs.DB.QueryRowContext(ctx,
+	err := configs.DB.QueryRowContext(ctx.Request.Context(),
 		`SELECT id, username, password, created_at FROM users WHERE username = $1`,
 		username,
 	).Scan(&user.ID, &user.Username, &user.Password, &user.CreatedAt)

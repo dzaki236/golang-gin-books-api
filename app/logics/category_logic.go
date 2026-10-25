@@ -1,7 +1,6 @@
 package logics
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -9,10 +8,12 @@ import (
 	"books-api/app/configs"
 	"books-api/app/helpers"
 	"books-api/app/structs"
+
+	"github.com/gin-gonic/gin"
 )
 
-func ListCategories(ctx context.Context) ([]structs.Category, error) {
-	rows, err := configs.DB.QueryContext(ctx, `SELECT id, name, created_at FROM categories ORDER BY id`)
+func ListCategories(ctx *gin.Context) ([]structs.Category, error) {
+	rows, err := configs.DB.QueryContext(ctx.Request.Context(), `SELECT id, name, created_at FROM categories ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -29,9 +30,9 @@ func ListCategories(ctx context.Context) ([]structs.Category, error) {
 	return categories, rows.Err()
 }
 
-func FindCategory(ctx context.Context, id int) (structs.Category, error) {
+func FindCategory(ctx *gin.Context, id int) (structs.Category, error) {
 	var category structs.Category
-	err := configs.DB.QueryRowContext(ctx,
+	err := configs.DB.QueryRowContext(ctx.Request.Context(),
 		`SELECT id, name, created_at FROM categories WHERE id = $1`, id,
 	).Scan(&category.ID, &category.Name, &category.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -40,10 +41,10 @@ func FindCategory(ctx context.Context, id int) (structs.Category, error) {
 	return category, err
 }
 
-func CreateCategory(ctx context.Context, name string) (structs.Category, error) {
+func CreateCategory(ctx *gin.Context, name, username string) (structs.Category, error) {
 	var category structs.Category
-	err := configs.DB.QueryRowContext(ctx,
-		`INSERT INTO categories (name) VALUES ($1) RETURNING id, name, created_at`, name,
+	err := configs.DB.QueryRowContext(ctx.Request.Context(),
+		`INSERT INTO categories (name, created_by) VALUES ($1, $2) RETURNING id, name, created_at`, name, username,
 	).Scan(&category.ID, &category.Name, &category.CreatedAt)
 	if err != nil {
 		if strings.Contains(err.Error(), "categories_name_key") {
@@ -54,11 +55,11 @@ func CreateCategory(ctx context.Context, name string) (structs.Category, error) 
 	return category, nil
 }
 
-func UpdateCategory(ctx context.Context, id int, name string) (structs.Category, error) {
+func UpdateCategory(ctx *gin.Context, id int, name, username string) (structs.Category, error) {
 	var category structs.Category
-	err := configs.DB.QueryRowContext(ctx,
-		`UPDATE categories SET name = $2, modified_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, name, created_at`,
-		id, name,
+	err := configs.DB.QueryRowContext(ctx.Request.Context(),
+		`UPDATE categories SET name = $2, modified_at = CURRENT_TIMESTAMP, modified_by = $3 WHERE id = $1 RETURNING id, name, created_at`,
+		id, name, username,
 	).Scan(&category.ID, &category.Name, &category.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return structs.Category{}, helpers.ErrCategoryNotFound
@@ -72,8 +73,8 @@ func UpdateCategory(ctx context.Context, id int, name string) (structs.Category,
 	return category, nil
 }
 
-func DeleteCategory(ctx context.Context, id int) error {
-	result, err := configs.DB.ExecContext(ctx, `DELETE FROM categories WHERE id = $1`, id)
+func DeleteCategory(ctx *gin.Context, id int) error {
+	result, err := configs.DB.ExecContext(ctx.Request.Context(), `DELETE FROM categories WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}

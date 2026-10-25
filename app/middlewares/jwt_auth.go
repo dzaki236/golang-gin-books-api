@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"books-api/app/helpers"
+	"books-api/app/structs"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -26,7 +27,8 @@ func JWTAuth() gin.HandlerFunc {
 			context.Abort()
 			return
 		}
-		token, err := jwt.Parse(parts[1], func(token *jwt.Token) (any, error) {
+		usersSign := &structs.JWTUsersSign{}
+		token, err := jwt.ParseWithClaims(parts[1], usersSign, func(token *jwt.Token) (any, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
@@ -37,6 +39,18 @@ func JWTAuth() gin.HandlerFunc {
 			context.Abort()
 			return
 		}
+		if usersSign.Username == "" {
+			helpers.Respond(context, http.StatusUnauthorized, "token Bearer tidak valid atau sudah kedaluwarsa", nil)
+			context.Abort()
+			return
+		}
+		if usersSign.ID == "" || helpers.IsTokenRevoked(usersSign.ID) {
+			helpers.Respond(context, http.StatusUnauthorized, "token Bearer tidak valid atau sudah kedaluwarsa", nil)
+			context.Abort()
+			return
+		}
+		context.Set("username", usersSign.Username)
+		context.Set("jwt_users_signs", usersSign)
 		context.Next()
 	}
 }

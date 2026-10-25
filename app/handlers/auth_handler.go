@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"log"
 	"net/http"
@@ -22,7 +24,7 @@ const accessTokenLifetime = 24 * time.Hour
 
 func Register(context *gin.Context) {
 	var request structs.AuthRequest
-	if err := context.ShouldBindJSON(&request); err != nil || !validCredentials(request) {
+	if err := context.ShouldBindJSON(&request); err != nil || !_validCredentials(request) {
 		helpers.Respond(context, http.StatusBadRequest, "nama pengguna harus terdiri dari 3-100 karakter dan kata sandi 8-72 karakter", nil)
 		return
 	}
@@ -33,7 +35,7 @@ func Register(context *gin.Context) {
 		helpers.Respond(context, http.StatusInternalServerError, "akun tidak dapat dibuat", nil)
 		return
 	}
-	user, err := logics.CreateUser(context.Request.Context(), request.Username, string(passwordHash))
+	user, err := logics.CreateUser(context, request.Username, string(passwordHash))
 	if errors.Is(err, helpers.ErrUsernameTaken) {
 		helpers.Respond(context, http.StatusConflict, "nama pengguna sudah terdaftar", nil)
 		return
@@ -51,13 +53,13 @@ func Login(context *gin.Context) {
 	if len(jwtSecret) < 32 {
 		log.Fatal("JWT_SECRET wajib diatur dan berisi setidaknya 32 karakter")
 	}
-	if err := context.ShouldBindJSON(&request); err != nil || !validCredentials(request) {
+	if err := context.ShouldBindJSON(&request); err != nil || !_validCredentials(request) {
 		helpers.Respond(context, http.StatusBadRequest, "nama pengguna dan kata sandi wajib diisi", nil)
 		return
 	}
 
 	request.Username = strings.TrimSpace(request.Username)
-	user, err := logics.FindUserByUsername(context.Request.Context(), request.Username)
+	user, err := logics.FindUserByUsername(context, request.Username)
 	if err != nil {
 		if errors.Is(err, helpers.ErrUserNotFound) {
 			helpers.Respond(context, http.StatusUnauthorized, "nama pengguna atau kata sandi salah", nil)
@@ -73,12 +75,21 @@ func Login(context *gin.Context) {
 
 	issuedAt := time.Now()
 	expiresAt := issuedAt.Add(accessTokenLifetime)
+	tokenIDBytes := make([]byte, 16)
+	if _, err := rand.Read(tokenIDBytes); err != nil {
+		helpers.Respond(context, http.StatusInternalServerError, "token akses tidak dapat dibuat", nil)
+		return
+	}
 	claims := jwt.RegisteredClaims{
 		Subject:   strconv.Itoa(user.ID),
+		ID:        hex.EncodeToString(tokenIDBytes),
 		IssuedAt:  jwt.NewNumericDate(issuedAt),
 		ExpiresAt: jwt.NewNumericDate(expiresAt),
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, structs.JWTUsersSign{
+		Username:         user.Username,
+		RegisteredClaims: claims,
+	})
 	signedToken, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		helpers.Respond(context, http.StatusInternalServerError, "token akses tidak dapat dibuat", nil)
@@ -94,7 +105,23 @@ func Login(context *gin.Context) {
 	})
 }
 
-func validCredentials(request structs.AuthRequest) bool {
+func Logout(context *gin.Context) {
+	claims, ok := context.Get("jwt_users_signs")
+	if !ok {
+		helpers.Respond(context, http.StatusUnauthorized, "token Bearer tidak valid atau sudah kedaluwarsa", nil)
+		return
+	}
+	usersSign, ok := claims.(*structs.JWTUsersSign)
+	if !ok || usersSign.ID == "" || usersSign.ExpiresAt == nil {
+		helpers.Respond(context, http.StatusUnauthorized, "token Bearer tidak valid atau sudah kedaluwarsa", nil)
+		return
+	}
+
+	helpers.RevokeToken(usersSign.ID, usersSign.ExpiresAt.Time)
+	helpers.Respond(context, http.StatusOK, "berhasil keluar", nil)
+}
+
+func _validCredentials(request structs.AuthRequest) bool {
 	username := strings.TrimSpace(request.Username)
 	return len(username) >= 3 && len(username) <= 100 && len(request.Password) >= 8 && len(request.Password) <= 72
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterCategoryRoutes(router gin.IRouter) {
+func RegisterCategoryRoutes(router *gin.RouterGroup) {
 	categories := router.Group("/categories", middlewares.JWTAuth())
 	categories.GET("", handlers.ListCategories)
 	categories.POST("", handlers.CreateCategory)
