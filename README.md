@@ -144,13 +144,10 @@ curl -X POST http://localhost:8080/api/books \
 
 ### Mengambil Buku dan Buku dalam Kategori
 
-```sh
-curl http://localhost:8080/api/books \
-  -H "Authorization: Bearer <access_token>"
-
-curl http://localhost:8080/api/categories/1/books \
-  -H "Authorization: Bearer <access_token>"
-```
+| Data yang diambil | Perintah |
+| --- | --- |
+| Semua buku | `curl -H "Authorization: Bearer <access_token>" http://localhost:8080/api/books` |
+| Buku dalam kategori 1 | `curl -H "Authorization: Bearer <access_token>" http://localhost:8080/api/categories/1/books` |
 
 ### Logout
 
