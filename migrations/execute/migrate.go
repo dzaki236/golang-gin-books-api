@@ -14,35 +14,36 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 )
 
-func main() {
+// https://github.com/golang-migrate/migrate : Forked And Reference from
+func initialize() {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
-		fatal(fmt.Errorf("load .env: %w", err))
+		_fatal(fmt.Errorf("load .env: %w", err))
 	}
 
 	migrationPath := flag.String("path", "", "path to a SQL migration file or directory containing SQL migration files")
 	databaseURL := flag.String("database-url", os.Getenv("DATABASE_URL"), "PostgreSQL connection URL (defaults to DATABASE_URL)")
 	flag.Parse()
 
-	if err := validateMigrationPath(*migrationPath); err != nil {
-		fatal(err)
+	if err := _validateMigrationPath(*migrationPath); err != nil {
+		_fatal(err)
 	}
 	if *databaseURL == "" {
-		fatal(errors.New("database URL is required; set DATABASE_URL or pass --database-url"))
+		_fatal(errors.New("database URL is required; set DATABASE_URL or pass --database-url"))
 	}
 
 	database, err := sql.Open("postgres", *databaseURL)
 	if err != nil {
-		fatal(fmt.Errorf("open database: %w", err))
+		_fatal(fmt.Errorf("open database: %w", err))
 	}
 	defer database.Close()
 
 	if err := database.Ping(); err != nil {
-		fatal(fmt.Errorf("ping database: %w", err))
+		_fatal(fmt.Errorf("ping database: %w", err))
 	}
 
 	pathInfo, err := os.Stat(filepath.Clean(*migrationPath))
 	if err != nil {
-		fatal(fmt.Errorf("stat migration path: %w", err))
+		_fatal(fmt.Errorf("stat migration path: %w", err))
 	}
 
 	var source migrate.MigrationSource
@@ -51,26 +52,26 @@ func main() {
 	} else {
 		file, err := os.Open(*migrationPath)
 		if err != nil {
-			fatal(fmt.Errorf("open migration file: %w", err))
+			_fatal(fmt.Errorf("open migration file: %w", err))
 		}
 
 		migration, err := migrate.ParseMigration(filepath.Base(*migrationPath), file)
 		file.Close()
 		if err != nil {
-			fatal(fmt.Errorf("parse migration file: %w", err))
+			_fatal(fmt.Errorf("parse migration file: %w", err))
 		}
 
 		source = &migrate.MemoryMigrationSource{Migrations: []*migrate.Migration{migration}}
 	}
 	count, err := migrate.Exec(database, "postgres", source, migrate.Up)
 	if err != nil {
-		fatal(fmt.Errorf("run migrations: %w", err))
+		_fatal(fmt.Errorf("run migrations: %w", err))
 	}
 
 	fmt.Printf("applied %d migration(s)\n", count)
 }
 
-func validateMigrationPath(path string) error {
+func _validateMigrationPath(path string) error {
 	if path == "" {
 		return errors.New("migration path is required; pass --path=<file.sql or directory>")
 	}
@@ -86,7 +87,11 @@ func validateMigrationPath(path string) error {
 	return nil
 }
 
-func fatal(err error) {
+func _fatal(err error) {
 	fmt.Fprintln(os.Stderr, "migration failed:", err)
 	os.Exit(1)
+}
+
+func main() {
+	initialize()
 }
